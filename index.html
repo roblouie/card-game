@@ -23,7 +23,7 @@
 <script>
   var socket = io();
   var username = prompt("Enter a username");
-  socket.emit('user joined', username);
+  socket.emit('set username', username);
 
   $('form').submit(function(){
     socket.emit('chat message', $('#m').val());

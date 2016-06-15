@@ -3,6 +3,7 @@
 var app = require('express')();
 var http = require('http').Server(app);
 var io = require('socket.io')(http);
+const PlayerManager = require('player-manager');
 
 const jobCards = [
   "Model",
@@ -34,6 +35,7 @@ const qualificationCards = [
 
 let currentGameJobs = shuffle(jobCards);
 let currentGameQualifications = shuffle(qualificationCards);
+const playerManager = new PlayerManager();
 
 app.get('/', function(req, res){
   res.sendFile(__dirname + '/index.html');
