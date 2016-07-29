@@ -1,9 +1,12 @@
 'use strict';
 
-var app = require('express')();
+const express = require('express');
+const app = express();
 var http = require('http').Server(app);
+const path = require('path');
 var io = require('socket.io')(http);
-const PlayerManager = require('player-manager');
+const PlayerManager = require('./player-manager');
+const Dealer = require('./dealer');
 
 const jobCards = [
   "Model",
@@ -33,30 +36,34 @@ const qualificationCards = [
   "Online Dating Profile"
 ];
 
-let currentGameJobs = shuffle(jobCards);
-let currentGameQualifications = shuffle(qualificationCards);
 const playerManager = new PlayerManager();
+const jobCardDealer = new Dealer(jobCards);
+const qualificationCardDealer = new Dealer(qualificationCards);
 
-app.get('/', function(req, res){
-  res.sendFile(__dirname + '/index.html');
-});
+app.use(express.static(path.join(__dirname, 'public')));
 
 app.get('/newgame', function(req, res) {
-  currentGameJobs = shuffle(jobCards);
-  currentGameQualifications = shuffle(qualificationCards);
   io.emit('chat message', 'New game started.');
 });
 
 io.on('connection', function(socket){
-  socket.join('some room');
-  socket.on('chat message', function(msg){
-    io.emit('chat message', socket.username + ": " + currentGameQualifications.splice(0,4).join(" "));
+  socket.on('disconnect', function () {
+    if (playerManager.isJudgePlayer(socket)) {
+      io.emit('chat message', playerManager.getPlayer(socket).username + " has left the game while judging, starting new round");
+    }
+    playerManager.removePlayer(socket);
   });
 
-  socket.on('user joined', function(username){
-    socket.username = username;
-    socket.broadcast.emit('chat message', 'user connected: ' + username);
+  socket.on('chat message', function(msg){
+    playerManager.answeringPlayers.forEach(player => {
+      player.socket.emit('chat message', player.username + ": " + qualificationCardDealer.dealCards(4).join(" "));
+    })
   });
+
+  socket.on('set username', function(username) {
+    playerManager.addPlayer(socket, username);
+  });
+
 });
 
 http.listen(3000, function(){
